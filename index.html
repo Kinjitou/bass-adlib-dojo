@@ -138,6 +138,51 @@ dl.gloss dd{margin:0;color:var(--muted)}
 @media (max-width:520px){dl.gloss{grid-template-columns:1fr} dl.gloss dd{margin-bottom:6px}}
 .chartline{font:700 .95rem var(--mono);margin:6px 0 0;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){.nd circle{transition:none}}
+.tabs{overflow-x:auto;scrollbar-width:none;max-width:100%}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap}
+/* chromatic board */
+.cd circle.dot{fill:var(--r-other);stroke:var(--line);stroke-width:1}
+.cd text{fill:var(--on-light);font:700 12px var(--mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.cd.unused{opacity:.3}
+.cd.nx circle.dot{stroke:var(--r-root);stroke-width:3}
+.cd.cur circle.dot{fill:var(--r-root);stroke:var(--r-root);transform:scale(1.25)}
+.cd.cur text{fill:var(--on-dot)}
+.chips.rows{flex-wrap:wrap}
+.chips.rows .chip{flex:0 0 calc(var(--g) * (100% - 12px) / 16 + (var(--g) / 4 - 1) * 4px)}
+.cstat{font:700 .9rem var(--mono);color:var(--muted);align-self:center}
+/* session editor */
+.bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.bar{display:flex;gap:3px;border:1px solid var(--line);border-radius:10px;padding:4px;background:var(--surface2);position:relative;min-width:0}
+.bar .bn{position:absolute;top:3px;left:7px;font:500 .62rem var(--mono);color:var(--muted);pointer-events:none}
+.slot{flex:1 1 0;min-width:0;border:1px solid transparent;background:var(--surface);border-radius:7px;padding:17px 2px 8px;font:700 .85rem var(--mono);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.slot.playing{background:var(--accent);color:var(--accent-ink)}
+.picker{display:grid;gap:8px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.keys{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.quals{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.pk{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 2px;font:700 .82rem var(--mono);cursor:pointer;min-height:40px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+textarea{width:100%;min-height:68px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 .9rem/1.6 var(--mono);color:var(--ink);resize:vertical}
+.err{color:var(--r-root);font-size:.82rem}
+.ok{color:var(--r-5);font-size:.82rem}
+.btn.sm{padding:6px 12px;min-height:38px;font-size:.85rem}
+.btn:disabled{opacity:.4;cursor:default}
+.cgrid{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end}
+.cgrid select{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+@media (max-width:900px){.keys{grid-template-columns:repeat(6,minmax(0,1fr))}.quals{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media (max-width:700px){
+  .tabs button{flex:1 0 auto;padding:10px 12px}
+  .btn.sm{flex:0 0 auto;min-height:42px}
+  .slot{font-size:.8rem}
+  .bar.two{flex-direction:column}
+  .bar.two .slot+.slot{padding-top:8px}
+  .chips.rows .chip{font-size:.7rem;padding:8px 1px;letter-spacing:-.02em;white-space:normal;overflow-wrap:anywhere;line-height:1.15;text-overflow:clip}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr}
+  .cgrid .chk{grid-column:1/-1}
+  .cgrid select{width:100%;padding:10px}
+}
 
 /* settings drawer */
 details.ctl>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;font-weight:700;white-space:nowrap;min-height:48px}
@@ -199,6 +244,8 @@ button,svg,.chip,select{touch-action:manipulation}
       <button role="tab" id="tab-lesson" data-tab="lesson">レッスン</button>
       <button role="tab" id="tab-scale" data-tab="scale">スケール</button>
       <button role="tab" id="tab-prog" data-tab="prog">進行モード</button>
+      <button role="tab" id="tab-session" data-tab="session">セッション</button>
+      <button role="tab" id="tab-chroma" data-tab="chroma">クロマチック</button>
     </nav>
   </header>
 
@@ -267,9 +314,51 @@ const SCALES={
   arp7:{name:'7th アルペジオ',iv:[0,4,7,10],sound:'ブルースやファンクの骨組み。',use:'7thコードでの着地点探し。'},
   arpm7:{name:'m7 アルペジオ',iv:[0,3,7,10],sound:'柔らかいマイナーの骨組み。',use:'m7コードでの着地点探し。'}
 };
-const SC_ORDER=['root','r5','minpent','majpent','blues','major','minor','dorian','mixo','hmp5','arpM7','arp7','arpm7'];
+SCALES.locrian={name:'ロクリアン',iv:[0,1,3,5,6,8,10],sound:'不安定で暗い。',use:'m7♭5コードの上で。'};
+SCALES.dimwh={name:'ディミニッシュ（全半）',iv:[0,2,3,5,6,8,9,11],sound:'規則的で緊張感が強い。',use:'dim7コードの上で。'};
+const SC_ORDER=['root','r5','minpent','majpent','blues','major','minor','dorian','mixo','hmp5','locrian','dimwh','arpM7','arp7','arpm7'];
 
-const Q={maj:{s:'',iv:[0,4,7]},m:{s:'m',iv:[0,3,7]},'7':{s:'7',iv:[0,4,7,10]},maj7:{s:'maj7',iv:[0,4,7,11]},m7:{s:'m7',iv:[0,3,7,10]}};
+const Q={maj:{s:'',iv:[0,4,7]},m:{s:'m',iv:[0,3,7]},'7':{s:'7',iv:[0,4,7,10]},maj7:{s:'maj7',iv:[0,4,7,11]},m7:{s:'m7',iv:[0,3,7,10]},
+  m7b5:{s:'m7♭5',iv:[0,3,6,10]},dim7:{s:'dim7',iv:[0,3,6,9]},sus4:{s:'sus4',iv:[0,5,7]},'6':{s:'6',iv:[0,4,7,9]},m6:{s:'m6',iv:[0,3,7,9]}};
+const QORDER=['maj','m','7','maj7','m7','m7b5','dim7','sus4','6','m6'];
+/* セッションでのコード別スケール（指板の小さい丸） */
+const QSCALE={maj:'major',m:'minor','7':'mixo',maj7:'major',m7:'dorian',m7b5:'locrian',dim7:'dimwh',sus4:'mixo','6':'major',m6:'dorian'};
+const DEF_CUSTOM=[[{r:2,q:'m7'}],[{r:7,q:'7'}],[{r:0,q:'maj7'}],[{r:9,q:'7'}],[{r:2,q:'m7'}],[{r:7,q:'7'}],[{r:0,q:'maj7'}],[{r:0,q:'maj7'}]];
+
+/* ---------- chromatic ---------- */
+const PATTERNS={
+  p1234:{name:'1-2-3-4（往復）',desc:'人差し指から小指まで1フレットずつ。4弦→1弦→4弦。'},
+  perm:{name:'指順の入れ替え',desc:'1-3-2-4などの順番で、弱い指の独立性を鍛える。'},
+  skip:{name:'弦飛ばし',desc:'4弦→2弦→3弦→1弦と、弦を1本飛ばして移動する。'},
+  spider:{name:'スパイダー',desc:'隣り合う2本の弦を交互に行き来する。'}
+};
+const PERMS=['1324','1243','1423','2143','1342','4321'];
+const SUBS={1:'4分音符',2:'8分音符',3:'3連符',4:'16分音符'};
+const LEVELS={
+  easy:{name:'初級',sum:'4分音符・60 BPM・5フレット固定。まずは1音ずつ正確に。',
+    set:{cPattern:'p1234',cSub:1,cTempo:60,cStart:5,cClimb:false,cSpeed:false,cGuide:true},
+    points:['5フレットから始める。フレットの間隔が狭く、指が届きやすい','1フレットに1本の指を置く。指先は弦の真上に立てる','次の指を置いてから前の指を離すと、音が途切れない','クリックの「カッ」に音の頭を合わせる']},
+  mid:{name:'中級',sum:'8分音符・80→120 BPM・指順入れ替え・1フレットずつ上下に移動。',
+    set:{cPattern:'perm',cPerm:'1324',cSub:2,cTempo:80,cStart:1,cClimb:true,cSpeed:true,cInc:4,cEvery:2,cMax:120,cGuide:false},
+    points:['苦手な指順（特に3と4の指）ほどゆっくり確実に','ポジションが上がるとフレットの間隔が狭くなる。指の開きを合わせる','テンポが上がっても肩と手首の力を抜く','弾いていない弦は、余った指でミュートして余計な音を止める']},
+  hard:{name:'上級',sum:'16分音符・90→140 BPM・スパイダー・ポジション移動。',
+    set:{cPattern:'spider',cSub:4,cTempo:90,cStart:1,cClimb:true,cSpeed:true,cInc:5,cEvery:2,cMax:140,cGuide:false},
+    points:['押さえた指はできるだけ残したまま次の弦へ移る','16分は「タカタカ」と口で数えて体にリズムを入れる','右手は人差し指と中指を必ず交互に使う','崩れたらテンポを10下げてやり直す。速さより粒の揃いが優先']}
+};
+function chromaSeq(){
+  const P=S.cPattern,out=[];
+  if(P==='spider'){
+    [[3,2],[2,1],[1,0]].forEach(([a,b])=>out.push({si:a,fg:1},{si:b,fg:2},{si:a,fg:3},{si:b,fg:4}));
+    [[0,1],[1,2],[2,3]].forEach(([a,b])=>out.push({si:a,fg:4},{si:b,fg:3},{si:a,fg:2},{si:b,fg:1}));
+    return out;}
+  const fu=P==='perm'?S.cPerm.split('').map(Number):[1,2,3,4],fd=[...fu].reverse();
+  const us=P==='skip'?[3,1,2,0]:[3,2,1,0],ds=P==='skip'?[0,2,1,3]:[0,1,2,3];
+  us.forEach(si=>fu.forEach(fg=>out.push({si,fg})));
+  ds.forEach(si=>fd.forEach(fg=>out.push({si,fg})));
+  return out;
+}
+/* ポジション移動：1〜9フレット（最上段が12フレットに収まる範囲）を往復 */
+function nextStart(st,dir){let d=dir;if(st+d>9||st+d<1)d=-d;return{start:st+d,dir:d};}
 
 const PROGS={
   vamp_m7:{name:'ワンコード（m7）',sc:'minpent',chords:[{d:0,q:'m7',b:8}],
@@ -335,7 +424,8 @@ const GLOSS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={tab:'lesson',lesson:0,key:9,scale:'root',pos:null,prog:'vamp_m7',follow:false,label:'note',tempo:80,vd:0.7,vc:0.45,preview:0};
+const DEF={tab:'lesson',lesson:0,key:9,scale:'root',pos:null,prog:'vamp_m7',follow:false,label:'note',tempo:80,vd:0.7,vc:0.45,preview:0,
+  custom:JSON.parse(JSON.stringify(DEF_CUSTOM)),cLevel:'easy',cPattern:'p1234',cPerm:'1324',cSub:1,cTempo:60,cStart:5,cClimb:false,cSpeed:false,cInc:4,cEvery:2,cMax:120,cGuide:true};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('bassdojo')||'null'); if(s) S=Object.assign(S,s);}catch(e){}
 function save(){try{localStorage.setItem('bassdojo',JSON.stringify(S))}catch(e){}}
@@ -349,23 +439,33 @@ const NUT=72, END=982, K=(END-NUT)/(1-Math.pow(2,-FRETS/12));
 const fx=n=>NUT+K*(1-Math.pow(2,-n/12));
 const nx=f=>f===0?NUT-30:(fx(f-1)+fx(f))/2;
 const sy=i=>42+i*44;
+function roleC(i,blue,civ){
+  if(civ){if(i===6&&civ.includes(6)&&!civ.includes(7))return'fifth';
+    if(i===9&&civ.includes(6)&&civ.includes(9))return'seventh';
+    if(i===5&&civ.includes(5)&&!civ.includes(4)&&!civ.includes(3))return'third';}
+  return roleOf(i,blue);}
 function roleOf(i,blue){if(i===0)return'root';if(i===3||i===4)return'third';if(i===7)return'fifth';if(i===10||i===11)return'seventh';if(i===6&&blue)return'blue';return'other'}
-function curIdx(){return play.on&&play.idx>=0?play.idx:Math.min(S.preview,prog().chords.length-1)}
+function curIdx(){const L=prog().chords.length;return Math.min(play.on&&play.mode==='band'&&play.idx>=0?play.idx:S.preview,L-1)}
+function buildCustom(){
+  if(!Array.isArray(S.custom)||!S.custom.length)S.custom=JSON.parse(JSON.stringify(DEF_CUSTOM));
+  PROGS.custom={name:'マイ進行（セッション）',sc:'major',
+    chords:S.custom.flatMap(bar=>bar.map(c=>({d:(c.r-S.key+12)%12,q:c.q,b:4/bar.length,sc:QSCALE[c.q]})))};
+}
 
 function noteSets(){
-  let labelRoot,scaleSet,chordSet=null,nextRoot=null,blue=false;
+  let labelRoot,scaleSet,chordSet=null,nextRoot=null,blue=false,civ=null;
   if(S.follow){
     const p=prog(),ci=curIdx(),c=p.chords[ci],cr=chordRoot(c);
     chordSet=new Set(Q[c.q].iv.map(i=>(cr+i)%12));
     const sr=c.sc?cr:(S.key+(p.from||0))%12, siv=SCALES[c.sc||p.sc].iv;
     scaleSet=new Set(siv.map(i=>(sr+i)%12));
-    labelRoot=cr;
+    labelRoot=cr;civ=Q[c.q].iv;
     if(p.chords.length>1){const nc=p.chords[(ci+1)%p.chords.length]; nextRoot=chordRoot(nc);}
   }else{
     labelRoot=S.key; blue=S.scale==='blues';
     scaleSet=new Set(SCALES[S.scale].iv.map(i=>(S.key+i)%12));
   }
-  return {labelRoot,scaleSet,chordSet,nextRoot,blue};
+  return {labelRoot,scaleSet,chordSet,nextRoot,blue,civ};
 }
 function dotsSvg(P,f0,f1,lo,hi,ns){
   const {labelRoot,scaleSet,chordSet,nextRoot,blue}=ns;let dots='';
@@ -377,7 +477,7 @@ function dotsSvg(P,f0,f1,lo,hi,ns){
     let g=`<g class="nd" data-m="${m}" opacity="${out?0.28:1}"><title>${si+1}弦${f}フレット ${NOTE[pc]}（${DEG[iv]}）</title>`;
     g+=`<circle cx="${x}" cy="${y}" r="21" fill="transparent"/>`;
     if(isN)g+=`<circle class="ring" cx="${x}" cy="${y}" r="18"/>`;
-    if(inC){const r=roleOf(iv,blue),light=r==='third'||r==='other';
+    if(inC){const r=roleC(iv,blue,ns.civ),light=r==='third'||r==='other';
       g+=`<circle class="dot c-${r}" cx="${x}" cy="${y}" r="14"/><text class="${light?'lbl-l':'lbl-d'}" x="${x}" y="${y}">${S.label==='deg'?DEG[iv]:NOTE[pc]}</text>`;}
     else if(inS){g+=`<circle class="dot weak" cx="${x}" cy="${y}" r="6.5"/>`;}
     dots+=g+'</g>';}});
@@ -386,23 +486,31 @@ function dotsSvg(P,f0,f1,lo,hi,ns){
 const mqPhone=window.matchMedia('(max-width: 700px)');
 const coarse=window.matchMedia('(pointer: coarse)').matches;
 function renderBoard(){
-  const ns=noteSets(),svg=$('board');
-  let lo=-1,hi=99; if(S.pos!==null){lo=S.pos;hi=S.pos+3;}
-  if(mqPhone.matches){renderVertical(ns,lo,hi);}
+  const svg=$('board'),ch=S.tab==='chroma';
+  let pos,lo=-1,hi=99,ns=null,dots;
+  if(ch){pos=play.on&&play.mode==='chroma'?C.view:S.cStart;lo=pos;hi=pos+3;const used=new Set(chromaSeq().map(e=>e.si+'-'+e.fg));dots=P=>chromaDots(P,pos,used);}
+  else{ns=noteSets();pos=S.pos;if(pos!==null){lo=pos;hi=pos+3;}dots=(P,f0,f1)=>dotsSvg(P,f0,f1,lo,hi,ns);}
+  if(mqPhone.matches){renderVertical(pos,lo,hi,dots);}
   else{
     svg.classList.remove('vert');svg.setAttribute('viewBox','0 0 1000 230');
     svg.setAttribute('aria-label','ベース指板（上が1弦G、下が4弦E、左がナット）');
-    svg.innerHTML=horizontalBase(lo,hi)+dotsSvg((si,f)=>[nx(f),sy(si)],0,FRETS,lo,hi,ns);
+    svg.innerHTML=horizontalBase(pos,lo,hi)+dots((si,f)=>[nx(f),sy(si)],0,FRETS);
   }
-  renderLegend(ns.blue);
+  renderLegend(ns?ns.blue:false);
 }
-function horizontalBase(lo,hi){
+function chromaDots(P,st,used){
+  let d='';
+  STR.forEach((s,si)=>{for(let fg=1;fg<=4;fg++){const f=st+fg-1,[x,y]=P(si,f),m=s.m+f;
+    d+=`<g class="nd cd${used.has(si+'-'+fg)?'':' unused'}" data-m="${m}" data-k="${si}-${f}"><title>${si+1}弦${f}フレット（${fg}の指）</title><circle cx="${x}" cy="${y}" r="21" fill="transparent"/><circle class="dot" cx="${x}" cy="${y}" r="13"/><text x="${x}" y="${y}">${fg}</text></g>`;}});
+  return d;
+}
+function horizontalBase(pos,lo,hi){
   let h='';
   h+=`<rect class="wood-edge" x="${NUT}" y="16" width="${END-NUT+12}" height="184" rx="4"/>`;
   h+=`<rect class="wood" x="${NUT}" y="20" width="${END-NUT+8}" height="176"/>`;
   [3,5,7,9,15].forEach(f=>h+=`<circle class="inlay" cx="${nx(f)}" cy="108" r="7"/>`);
   h+=`<circle class="inlay" cx="${nx(12)}" cy="64" r="7"/><circle class="inlay" cx="${nx(12)}" cy="152" r="7"/>`;
-  if(S.pos!==null){const x1=S.pos<=0?NUT-52:fx(S.pos-1)+2,x2=fx(Math.min(hi,FRETS))-2;
+  if(pos!==null){const x1=pos<=0?NUT-52:fx(pos-1)+2,x2=fx(Math.min(hi,FRETS))-2;
     h+=`<rect class="boxr" x="${x1}" y="22" width="${x2-x1}" height="172" rx="8"/>`;}
   for(let n=1;n<=FRETS;n++){h+=`<line class="fretl" x1="${fx(n)}" y1="20" x2="${fx(n)}" y2="196"/>`;
     h+=`<text class="fnum${[3,5,7,9,12,15].includes(n)?' mk':''}" x="${nx(n)}" y="218">${n}</text>`;}
@@ -413,11 +521,11 @@ function horizontalBase(lo,hi){
   return h;
 }
 /* 縦向き：スマホ縦持ち用。左が4弦E、右が1弦G、上がナット。ポジション指定時はその周辺だけを拡大表示 */
-function renderVertical(ns,lo,hi){
+function renderVertical(pos,lo,hi,dots){
   const svg=$('board'),W=360,TOP=34,CX=178;
   let f0=0,f1=12;
-  if(S.pos!==null){if(S.pos<=1){f0=0;f1=S.pos+5;}else{f0=S.pos-1;f1=Math.min(FRETS,S.pos+4);}}
-  const RH=S.pos!==null?66:54;
+  if(pos!==null){if(pos<=1){f0=0;f1=pos+5;}else{f0=pos-1;f1=Math.min(FRETS,pos+4);}}
+  const RH=pos!==null?66:54;
   const vx=si=>70+(3-si)*72;
   const openY=TOP+24,nutY=TOP+46;
   const lineY=n=>f0===0?nutY+n*RH:TOP+10+(n-(f0-1))*RH;
@@ -430,7 +538,7 @@ function renderVertical(ns,lo,hi){
   for(let f=Math.max(1,f0);f<=f1;f++){
     if([3,5,7,9,15].includes(f))h+=`<circle class="inlay" cx="${CX}" cy="${noteY(f)}" r="7"/>`;
     if(f===12)h+=`<circle class="inlay" cx="106" cy="${noteY(f)}" r="7"/><circle class="inlay" cx="250" cy="${noteY(f)}" r="7"/>`;}
-  if(S.pos!==null){const y1=lo===0?TOP:lineY(lo-1)+2,y2=lineY(Math.min(hi,f1))-2;
+  if(pos!==null){const y1=lo===0?TOP:lineY(lo-1)+2,y2=lineY(Math.min(hi,f1))-2;
     h+=`<rect class="boxr" x="44" y="${y1}" width="272" height="${y2-y1}" rx="8"/>`;}
   for(let n=Math.max(1,f0-1);n<=f1;n++){if(n<f0-1)continue;
     h+=`<line class="fretl" x1="42" y1="${lineY(n)}" x2="318" y2="${lineY(n)}"/>`;}
@@ -441,10 +549,11 @@ function renderVertical(ns,lo,hi){
     h+=`<text class="slab" x="${vx(si)}" y="${f0===0?16:22}" text-anchor="middle">${si+1}${s.n}</text>`;});
   svg.classList.add('vert');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
   svg.setAttribute('aria-label','ベース指板（縦向き：左が4弦E、右が1弦G、上がナット）');
-  svg.innerHTML=h+dotsSvg((si,f)=>[vx(si),noteY(f)],f0,f1,lo,hi,ns);
+  svg.innerHTML=h+dots((si,f)=>[vx(si),noteY(f)],f0,f1);
 }
 mqPhone.addEventListener?mqPhone.addEventListener('change',()=>{renderBoard();renderPanel()}):mqPhone.addListener(()=>{renderBoard();renderPanel()});
 function renderLegend(blue){
+  if(S.tab==='chroma'){$('legend').innerHTML=`<span><i style="background:var(--r-root)"></i>いま弾く音</span><span><i style="border:2px solid var(--r-root)"></i>次の音</span><span>数字＝押さえる指（1 人差し指・2 中指・3 薬指・4 小指）</span>`;return;}
   const it=[['var(--r-root)','R（ルート）'],['var(--r-3)','3度'],['var(--r-5)','5度'],['var(--r-7)','7度']];
   if(!S.follow&&blue)it.push(['var(--r-blue)','♭5（ブルーノート）']);
   if(S.follow){it.push(['var(--r-other)','スケール音（小）']);}
@@ -461,14 +570,21 @@ $('board').addEventListener('pointerdown',e=>{const g=e.target.closest('.nd');if
 function renderStrip(){
   const p=prog(),ci=curIdx(),counting=play.on&&play.count>0;
   const now=chordName(p.chords[ci]),nxt=p.chords.length>1?chordName(p.chords[(ci+1)%p.chords.length]):'—';
-  if(!counting){$('nowChord').textContent=now;$('mChord').textContent=now;}
-  $('nextChord').textContent=nxt;$('mNext').textContent=nxt;
+  if(!counting&&S.tab!=='chroma'){$('nowChord').textContent=now;$('mChord').textContent=now;}
+  if(S.tab!=='chroma'){$('nextChord').textContent=nxt;$('mNext').textContent=nxt;}
+  const ch=S.tab==='chroma',tk=ch?'cTempo':'tempo',T=p.chords.reduce((a,c)=>a+c.b,0);
+  $('tempo').min=ch?40:50;$('tempo').max=ch?200:160;$('tempo').value=S[tk];
+  $('chips').classList.toggle('rows',!ch&&T>16);
+  if(ch){
+    if(!play.on){const t=`${S.cStart}〜${S.cStart+3}F`;$('nowChord').textContent=t;$('mChord').textContent=t;$('nextChord').textContent='—';$('mNext').textContent='—';
+      $('chips').innerHTML=`<span class="cstat">${PATTERNS[S.cPattern].name}${S.cPattern==='perm'?'（'+S.cPerm.split('').join('-')+'）':''} ・ ${SUBS[S.cSub]}</span>`;}
+  }else
   $('chips').innerHTML=p.chords.map((c,i)=>`<button type="button" class="chip${i===ci?' cur':''}" style="--g:${c.b}" data-i="${i}" title="${c.b}拍">${chordName(c)}</button>`).join('');
-  $('play').textContent=play.on?'■ 停止':'▶ 伴奏スタート';
+  $('play').textContent=play.on?'■ 停止':(S.tab==='chroma'?'▶ 練習スタート':'▶ 伴奏スタート');
   $('play').classList.toggle('on',play.on);
   $('mplay').textContent=play.on?'■':'▶';$('mplay').setAttribute('aria-label',play.on?'伴奏を止める':'伴奏スタート');
   $('mplay').classList.toggle('on',play.on);
-  $('bpm').textContent=S.tempo;
+  $('bpm').textContent=play.on&&play.mode==='chroma'?Math.round(C.bpm):S[tk];
 }
 $('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b||play.on)return;S.preview=+b.dataset.i;save();renderStrip();renderBoard();});
 function setBeats(beat){['beats','mbeats'].forEach(id=>[...$(id).children].forEach((d,i)=>{d.className=(i<=beat&&beat>=0)?('on'+(i===0?' one':'')):''}));}
@@ -484,26 +600,31 @@ function fillSelects(){
 }
 function syncControls(){
   $('key').value=S.key;$('scale').value=S.scale;$('pos').value=S.pos===null?'all':S.pos;$('prog').value=S.prog;
-  $('follow').checked=S.follow;$('tempo').value=S.tempo;$('vd').value=S.vd;$('vc').value=S.vc;
+  $('follow').checked=S.follow;$('vd').value=S.vd;$('vc').value=S.vc;
   $('lbl-note').setAttribute('aria-pressed',S.label==='note');$('lbl-deg').setAttribute('aria-pressed',S.label==='deg');
   $('scale').disabled=S.follow;
+  $('ctlBox').hidden=S.tab==='chroma';
   $('hint').textContent=S.follow?'コード追従中：スケールはコードごとに自動で切り替わる。度数は「いまのコードのルート」から数える。':'度数は選んだキーのルートから数える。';
+  if(S.prog==='custom')$('hint').textContent+='　マイ進行はキーの影響を受けない（移調はセッションタブで）。';
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
   const posTxt=S.pos===null?'全体':S.pos===0?'開放〜3F':`${S.pos}〜${S.pos+3}F`;
   $('sumState').textContent=`キー${NOTE[S.key]} ・ ${S.follow?'コード追従':SCALES[S.scale].name} ・ ${posTxt}`;
 }
-function all(){syncControls();renderBoard();renderStrip();renderPanel();save();}
+function all(){buildCustom();syncControls();renderBoard();renderStrip();renderPanel();save();}
 $('key').onchange=e=>{S.key=+e.target.value;all()};
 $('scale').onchange=e=>{S.scale=e.target.value;all()};
 $('pos').onchange=e=>{S.pos=e.target.value==='all'?null:+e.target.value;all()};
 $('prog').onchange=e=>{const was=play.on;stop();S.prog=e.target.value;S.preview=0;all();if(was)start();};
 $('follow').onchange=e=>{S.follow=e.target.checked;all()};
 document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S.label=b.dataset.l;all()});
-$('tempo').oninput=e=>{S.tempo=+e.target.value;$('bpm').textContent=S.tempo;save()};
+$('tempo').oninput=e=>{const ch=S.tab==='chroma',v=+e.target.value;S[ch?'cTempo':'tempo']=v;if(ch&&play.on&&play.mode==='chroma')C.bpm=v;$('bpm').textContent=v;save()};
 $('vd').oninput=e=>{S.vd=+e.target.value;if(drumBus)drumBus.gain.value=S.vd;save()};
 $('vc').oninput=e=>{S.vc=+e.target.value;if(padBus)padBus.gain.value=S.vc*0.5;save()};
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;
-  if(S.tab==='prog')S.follow=true; if(S.tab==='scale')S.follow=false; if(S.tab==='lesson')applyLesson(S.lesson,false); all();});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const prev=S.tab;S.tab=b.dataset.tab;
+  if(play.on&&((prev==='chroma')!==(S.tab==='chroma')))stop();
+  if(S.tab==='prog')S.follow=true; if(S.tab==='scale')S.follow=false; if(S.tab==='lesson')applyLesson(S.lesson,false);
+  if(S.tab==='session'){S.follow=true;if(S.prog!=='custom'){stop();S.prog='custom';S.preview=0;}}
+  all();});
 
 /* ---------- panels ---------- */
 function tx(s){const v=mqPhone.matches;return s.replace('{BOARD}',v?'指板図は縦向き。左が4弦（E）、右が1弦（G）、上の太い線がナットで、左の数字がフレット番号。':'指板図は上が1弦（G）、下が4弦（E）。左端の太い線がナット、下の数字がフレット番号。').replace('{R}',v?'下':'右').replace('{L}',v?'上':'左').replace('{TAP}',coarse?'タップ':'クリック');}
@@ -514,6 +635,8 @@ function applyLesson(i,stopPlay=true){
 }
 function renderPanel(){
   const P=$('panel');
+  if(S.tab==='session'){renderSession(P);return;}
+  if(S.tab==='chroma'){renderChromaPanel(P);return;}
   if(S.tab==='lesson'){
     const L=LESSONS[S.lesson];
     P.innerHTML=`<div class="lesson">
@@ -547,12 +670,120 @@ function renderPanel(){
     P.querySelectorAll('.sc').forEach(b=>b.onclick=()=>{S.scale=b.dataset.s;S.follow=false;all()});
   }else{
     P.innerHTML=`<h2>進行モード</h2><p class="lead" style="margin-bottom:12px">進行を選んで伴奏をスタート。コードが変わるたびに指板の大きい丸（コードトーン）が切り替わる。停止中はコード名のボタンで各コードを確認できる。</p>
-      <div class="grid">${Object.entries(PROGS).map(([k,p])=>`<button type="button" class="sc" data-p="${k}" aria-pressed="${k===S.prog}">
+      <div class="grid">${Object.entries(PROGS).filter(([k])=>k!=='custom').map(([k,p])=>`<button type="button" class="sc" data-p="${k}" aria-pressed="${k===S.prog}">
         <strong>${p.name}</strong>
         <span class="chartline">${p.chords.map(chordName).join(' → ')}</span>
         <p>${p.desc}</p><p>狙い目：${p.aim}</p></button>`).join('')}</div>`;
     P.querySelectorAll('.sc').forEach(b=>b.onclick=()=>{const was=play.on;stop();S.prog=b.dataset.p;S.preview=0;S.follow=true;all();if(was)start();});
   }
+}
+
+
+/* ---------- session ---------- */
+let sel={bar:0,slot:0};
+const RT={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const QPARSE={'':'maj',M:'maj',maj:'maj',m:'m',min:'m','-':'m','7':'7',maj7:'maj7',M7:'maj7','△7':'maj7','△':'maj7',m7:'m7','-7':'m7',min7:'m7',
+  m7b5:'m7b5','m7♭5':'m7b5','m7-5':'m7b5','ø':'m7b5','φ':'m7b5',dim:'dim7',dim7:'dim7','°':'dim7','o':'dim7','°7':'dim7',sus4:'sus4',sus:'sus4','6':'6',m6:'m6'};
+const chordLabel=c=>NOTE[c.r]+Q[c.q].s;
+const customText=()=>S.custom.map(b=>b.map(chordLabel).join(' ')).join(' | ');
+function parseChord(t){const m=t.match(/^([A-Ga-g])([#♯b♭]?)(.*)$/);if(!m)return null;
+  let r=RT[m[1].toUpperCase()];if(/[#♯]/.test(m[2]))r++;if(/[b♭]/.test(m[2]))r--;
+  const q=QPARSE[m[3]];return q?{r:(r+12)%12,q}:null;}
+function parseProgression(txt){
+  const bars=txt.replace(/｜/g,'|').replace(/　/g,' ').split('|').map(x=>x.trim()).filter(Boolean);
+  if(!bars.length)return{err:'コードが入っていない。'};
+  if(bars.length>16)return{err:`小節が${bars.length}個ある。最大16小節まで。`};
+  const out=[];
+  for(let i=0;i<bars.length;i++){const toks=bars[i].split(/\s+/).filter(Boolean);
+    if(toks.length>2)return{err:`${i+1}小節目にコードが${toks.length}個ある。1小節に2つまで。`};
+    const cs=[];for(const t of toks){const c=parseChord(t);if(!c)return{err:`「${t}」を読み取れない（${i+1}小節目）。例：C、Am7、F♯m7♭5、B♭maj7、Gsus4`};cs.push(c);}
+    out.push(cs);}
+  return{bars:out};
+}
+function progToBars(p){const bars=[];let half=null;
+  p.chords.forEach(c=>{const ch={r:chordRoot(c),q:c.q};
+    if(c.b===2){if(half){bars.push([half,ch]);half=null;}else half=ch;}
+    else for(let i=0;i<c.b/4;i++)bars.push([{...ch}]);});
+  if(half)bars.push([half]);return bars.slice(0,16);}
+function commitCustom(){buildCustom();save();renderStrip();renderBoard();renderSession($('panel'));}
+function renderSession(P){
+  const B=S.custom;sel.bar=Math.min(sel.bar,B.length-1);sel.slot=Math.min(sel.slot,B[sel.bar].length-1);
+  const pIdx=play.on&&play.mode==='band'&&S.prog==='custom'?play.idx:-1;let k=0;
+  const bars=B.map((bar,bi)=>`<div class="bar${bar.length===2?' two':''}"><span class="bn">${bi+1}</span>${bar.map((c,si)=>{const idx=k++;
+    return `<button type="button" class="slot${sel.bar===bi&&sel.slot===si?' sel':''}${idx===pIdx?' playing':''}" data-b="${bi}" data-s="${si}" data-k="${idx}">${chordLabel(c)}</button>`}).join('')}</div>`).join('');
+  const bar=B[sel.bar],cur=bar[sel.slot];
+  P.innerHTML=`<h2>セッション</h2>
+    <p class="lead">好きなコードを最大16小節まで入れて、ループ再生に合わせて自由に弾く。小節を選んでから、下のボタンでルートと種類を決める。指板は自動でコードに追従する。</p>
+    <div class="row" style="margin:12px 0 10px"><button type="button" class="btn" id="sPlay">${play.on?'■ 止める':'▶ このコードでセッション'}</button><span class="note">${B.length}小節・ループ再生</span></div>
+    <div class="bars">${bars}</div>
+    <div class="row" style="margin-top:8px">
+      <button type="button" class="btn ghost sm" id="sAdd" ${B.length>=16?'disabled':''}>＋ 小節</button>
+      <button type="button" class="btn ghost sm" id="sDel" ${B.length<=1?'disabled':''}>− 小節</button>
+      <button type="button" class="btn ghost sm" id="sSplit">${bar.length===2?'1コードに戻す':'この小節を2分割'}</button>
+      <button type="button" class="btn ghost sm" id="sDn">移調 −1</button>
+      <button type="button" class="btn ghost sm" id="sUp">移調 ＋1</button>
+    </div>
+    <div class="picker">
+      <div class="tag">${sel.bar+1}小節目${bar.length===2?(sel.slot?'（後半）':'（前半）'):''}のコード：<span style="color:var(--ink);font-family:var(--mono)">${chordLabel(cur)}</span></div>
+      <div class="keys">${NOTE.map((n,i)=>`<button type="button" class="pk" data-r="${i}" aria-pressed="${cur.r===i}">${n}</button>`).join('')}</div>
+      <div class="quals">${QORDER.map(q=>`<button type="button" class="pk" data-q="${q}" aria-pressed="${cur.q===q}">${Q[q].s||'M'}</button>`).join('')}</div>
+      <p class="note" style="margin:0">ルート→種類の順に押すと、次のコードへ自動で進む。M＝メジャー</p>
+    </div>
+    <h3>テキストで入力</h3>
+    <textarea id="sText" aria-label="コード進行のテキスト" spellcheck="false">${customText()}</textarea>
+    <p class="note" style="margin:4px 0 8px">小節は「|」で区切り、1小節に2つまでスペースで区切る。例：Am7 | D7 | Gmaj7 Cmaj7 | F♯m7♭5 B7</p>
+    <div class="row"><button type="button" class="btn sm" id="sParse">テキストを反映</button><span id="sMsg"></span></div>
+    <h3>サンプルから始める</h3>
+    <div class="row"><select id="sPreset" aria-label="サンプル進行">${Object.entries(PROGS).filter(([k])=>k!=='custom').map(([k,p])=>`<option value="${k}">${p.name}</option>`).join('')}</select>
+      <button type="button" class="btn ghost sm" id="sLoad">読み込む（キー${NOTE[S.key]}）</button></div>`;
+  P.querySelectorAll('.slot').forEach(b=>b.onclick=()=>{sel={bar:+b.dataset.b,slot:+b.dataset.s};renderSession(P);
+    if(!play.on){S.preview=+b.dataset.k;renderStrip();renderBoard();}});
+  P.querySelectorAll('.pk[data-r]').forEach(b=>b.onclick=()=>{cur.r=+b.dataset.r;ensureAudio();bassNote(28+((cur.r-4+12)%12));commitCustom();});
+  P.querySelectorAll('.pk[data-q]').forEach(b=>b.onclick=()=>{cur.q=b.dataset.q;
+    if(sel.slot<bar.length-1)sel.slot++;else if(sel.bar<B.length-1){sel.bar++;sel.slot=0;}
+    commitCustom();});
+  $('sAdd').onclick=()=>{if(B.length<16){B.push(B[B.length-1].map(c=>({...c})));sel={bar:B.length-1,slot:0};commitCustom();}};
+  $('sDel').onclick=()=>{if(B.length>1){B.pop();commitCustom();}};
+  $('sSplit').onclick=()=>{if(bar.length===2){bar.pop();sel.slot=0;}else{bar.push({...bar[0]});sel.slot=1;}commitCustom();};
+  $('sDn').onclick=()=>{B.forEach(b=>b.forEach(c=>c.r=(c.r+11)%12));commitCustom();};
+  $('sUp').onclick=()=>{B.forEach(b=>b.forEach(c=>c.r=(c.r+1)%12));commitCustom();};
+  $('sParse').onclick=()=>{const r=parseProgression($('sText').value);
+    if(r.err){$('sMsg').className='err';$('sMsg').textContent=r.err;return;}
+    S.custom=r.bars;sel={bar:0,slot:0};S.preview=0;commitCustom();$('sMsg').className='ok';$('sMsg').textContent=`${r.bars.length}小節を反映した。`;};
+  $('sLoad').onclick=()=>{S.custom=progToBars(PROGS[$('sPreset').value]);sel={bar:0,slot:0};S.preview=0;commitCustom();};
+  $('sPlay').onclick=()=>{play.on?stop():start();renderSession(P);};
+}
+
+/* ---------- chromatic panel ---------- */
+function renderChromaPanel(P){
+  const L=LEVELS[S.cLevel]||LEVELS.easy;
+  const opt=(arr,v,f)=>arr.map(x=>`<option value="${x}"${String(x)===String(v)?' selected':''}>${f(x)}</option>`).join('');
+  P.innerHTML=`<h2>クロマチック・トレーニング</h2>
+    <p class="lead">1フレットに1本の指を置いて、半音ずつ順番に弾く基礎練習。左手の指の独立と、右手との同期を鍛える。レベルを選んでスタート。</p>
+    <div class="grid" style="margin:12px 0">${Object.entries(LEVELS).map(([k,l])=>`<button type="button" class="sc" data-lv="${k}" aria-pressed="${k===S.cLevel}"><strong>${l.name}</strong><p>${l.sum}</p></button>`).join('')}</div>
+    <div class="row"><button type="button" class="btn" id="cPlay">${play.on?'■ 止める':'▶ 練習スタート'}</button>
+      <span class="note">${PATTERNS[S.cPattern].desc}</span></div>
+    <h3>練習のポイント（${L.name}）</h3>
+    <ol class="try">${L.points.map(p=>`<li>${p}</li>`).join('')}</ol>
+    <h3>細かい設定</h3>
+    <div class="cgrid">
+      <div class="field"><label for="cPattern">パターン</label><select id="cPattern">${opt(Object.keys(PATTERNS),S.cPattern,k=>PATTERNS[k].name)}</select></div>
+      <div class="field"><label for="cPerm">指順</label><select id="cPerm" ${S.cPattern==='perm'?'':'disabled'}>${opt(PERMS,S.cPerm,x=>x.split('').join('-'))}</select></div>
+      <div class="field"><label for="cSub">音符</label><select id="cSub">${opt([1,2,3,4],S.cSub,x=>SUBS[x])}</select></div>
+      <div class="field"><label for="cStart">開始フレット</label><select id="cStart">${opt([1,2,3,4,5,6,7,8,9],S.cStart,x=>x+'フレット')}</select></div>
+      <label class="chk" for="cClimb"><input type="checkbox" id="cClimb" ${S.cClimb?'checked':''}> 1周ごとにポジションを1フレット移動（1〜12フレットを往復）</label>
+      <label class="chk" for="cSpeed"><input type="checkbox" id="cSpeed" ${S.cSpeed?'checked':''}> 自動でテンポアップ</label>
+      <div class="field"><label for="cInc">上げ幅</label><select id="cInc" ${S.cSpeed?'':'disabled'}>${opt([2,4,5,8,10],S.cInc,x=>'+'+x+' BPM')}</select></div>
+      <div class="field"><label for="cEvery">間隔</label><select id="cEvery" ${S.cSpeed?'':'disabled'}>${opt([1,2,4],S.cEvery,x=>x+'周ごと')}</select></div>
+      <div class="field"><label for="cMax">上限</label><select id="cMax" ${S.cSpeed?'':'disabled'}>${opt([80,100,120,140,160,180,200],S.cMax,x=>x+' BPM')}</select></div>
+      <label class="chk" for="cGuide"><input type="checkbox" id="cGuide" ${S.cGuide?'checked':''}> お手本の音を鳴らす（オフでクリックだけ）</label>
+    </div>
+    <p class="note">テンポは伴奏バーのスライダーで変える（40〜200 BPM）。1周は${chromaSeq().length}音。</p>`;
+  const restart=fn=>{const was=play.on;stop();fn();S.cLevel=S.cLevel;all();if(was)start();};
+  P.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>restart(()=>{S.cLevel=b.dataset.lv;Object.assign(S,LEVELS[S.cLevel].set);}));
+  ['cPattern','cPerm','cSub','cStart','cInc','cEvery','cMax'].forEach(id=>$(id).onchange=e=>restart(()=>{const v=e.target.value;S[id]=/^\d+$/.test(v)&&id!=='cPerm'?+v:v;}));
+  ['cClimb','cSpeed','cGuide'].forEach(id=>$(id).onchange=e=>restart(()=>{S[id]=e.target.checked;}));
+  $('cPlay').onclick=()=>{play.on?stop():start();renderChromaPanel(P);};
 }
 
 /* ---------- audio ---------- */
@@ -581,6 +812,33 @@ function bassNote(m){const t=ctx.currentTime,f=ctx.createBiquadFilter();f.type='
   const g=ctx.createGain();env(g,t,0.005,0.5,1.3);f.connect(g).connect(master);
   ['sawtooth','sine'].forEach((tp,k)=>{const o=ctx.createOscillator();o.type=tp;o.frequency.value=mf(m)*(k?2:1);const og=ctx.createGain();og.gain.value=k?0.5:0.6;o.connect(og).connect(f);o.start(t);o.stop(t+1.4);});}
 
+function pluck(t,m,dur){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(1300,t);f.frequency.exponentialRampToValueAtTime(260,t+Math.min(dur,.4));
+  const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.005);g.gain.exponentialRampToValueAtTime(0.0001,t+Math.max(0.08,dur*0.95));
+  f.connect(g).connect(master);const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mf(m);o.connect(f);o.start(t);o.stop(t+dur+0.05);}
+let C={start:5,dir:1,bpm:60,cycle:0,seq:[],view:5};
+function scheduleChroma(n,t){
+  if(n<4){click(t,n===0);play.q.push({t,count:4-n,beat:n});play.next=t+60/C.bpm;return;}
+  const k=n-4,L=C.seq.length;
+  if(k>0&&k%L===0){C.cycle++;
+    if(S.cClimb){const r=nextStart(C.start,C.dir);C.start=r.start;C.dir=r.dir;}
+    if(S.cSpeed&&C.cycle%S.cEvery===0)C.bpm=Math.min(S.cMax,Math.max(C.bpm,C.bpm+S.cInc));}
+  const sd=60/C.bpm/S.cSub,i=k%L,e=C.seq[i],f=C.start+e.fg-1,m=STR[e.si].m+f,beat=Math.floor(k/S.cSub)%4;
+  if(k%S.cSub===0)click(t,beat===0);
+  if(S.cGuide)pluck(t,m,sd);
+  const ne=C.seq[(i+1)%L];
+  play.q.push({t,type:'c',si:e.si,f,fg:e.fg,start:C.start,cycle:C.cycle,bpm:C.bpm,beat,nsi:ne.si,nf:C.start+ne.fg-1});
+  play.next=t+sd;
+}
+function chromaUI(e){
+  if(e.start!==C.view){C.view=e.start;renderBoard();}
+  document.querySelectorAll('#board .cd.cur,#board .cd.nx').forEach(x=>x.classList.remove('cur','nx'));
+  const a=document.querySelector(`#board .cd[data-k="${e.si}-${e.f}"]`);if(a)a.classList.add('cur');
+  const b=document.querySelector(`#board .cd[data-k="${e.nsi}-${e.nf}"]`);if(b&&b!==a)b.classList.add('nx');
+  const t=`${e.si+1}弦 ${e.f}F`,nt=`${e.nsi+1}弦 ${e.nf}F`;
+  $('nowChord').textContent=t;$('mChord').textContent=t;$('nextChord').textContent=nt;$('mNext').textContent=nt;
+  $('barNo').textContent=`${e.fg}の指`;$('bpm').textContent=Math.round(e.bpm);
+  $('chips').innerHTML=`<span class="cstat">${e.cycle+1}周目 ・ ${Math.round(e.bpm)} BPM ・ ${e.start}〜${e.start+3}F</span>`;
+}
 const play={on:false,idx:-1,count:0,n:0,next:0,timer:0,q:[],raf:0,lock:null};
 function chordAtBeat(b){const p=prog();let a=0;for(let i=0;i<p.chords.length;i++){const c=p.chords[i];if(b<a+c.b)return{i,off:b-a,c};a+=c.b;}return{i:0,off:0,c:p.chords[0]};}
 function scheduleBeat(n,t){
@@ -592,17 +850,22 @@ function scheduleBeat(n,t){
   if(off===0){const r=chordRoot(c);let base=48+r;if(base<52)base+=12;pad(t,Q[c.q].iv.map(x=>base+x),c.b*bd);}
   play.q.push({t,idx:i,beat:inBar,bar:Math.floor(b/4)+1,bars:T/4});
 }
-function tick(){while(play.next<ctx.currentTime+0.12){scheduleBeat(play.n,play.next);play.next+=60/S.tempo;play.n++;}}
+function tick(){while(play.next<ctx.currentTime+0.12){if(play.mode==='chroma')scheduleChroma(play.n,play.next);else{scheduleBeat(play.n,play.next);play.next+=60/S.tempo;}play.n++;}}
 function ui(){
   const now=ctx.currentTime;let changed=false;
   while(play.q.length&&play.q[0].t<=now){const e=play.q.shift();
     if(e.count){play.count=e.count;$('nowChord').textContent=e.count;$('mChord').textContent=e.count;setBeats(e.beat);$('barNo').textContent='カウント';}
+    else if(e.type==='c'){play.count=0;setBeats(e.beat);chromaUI(e);}
     else{play.count=0;setBeats(e.beat);$('barNo').textContent=`${e.bar} / ${e.bars} 小節`;if(e.idx!==play.idx){play.idx=e.idx;changed=true;}}}
-  if(changed){renderStrip();if(S.follow)renderBoard();}
+  if(changed){renderStrip();if(S.follow)renderBoard();
+    if(S.tab==='session')document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('playing',+s.dataset.k===play.idx));}
   play.raf=requestAnimationFrame(ui);
 }
 function start(){ensureAudio();if(play.on)return;
-  Object.assign(play,{on:true,idx:-1,count:4,n:0,q:[],next:ctx.currentTime+0.08});
+  const mode=S.tab==='chroma'?'chroma':'band';
+  if(mode==='chroma'){C={start:S.cStart,dir:1,bpm:S.cTempo,cycle:0,seq:chromaSeq(),view:S.cStart};}
+  Object.assign(play,{on:true,mode,idx:-1,count:4,n:0,q:[],next:ctx.currentTime+0.08});
+  if(mode==='chroma')renderBoard();
   play.timer=setInterval(tick,25);tick();play.raf=requestAnimationFrame(ui);
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>play.lock=l).catch(()=>{});}catch(e){}
   renderStrip();
@@ -612,10 +875,11 @@ function stop(){if(!play.on)return;play.on=false;clearInterval(play.timer);cance
   try{play.lock&&play.lock.release();}catch(e){}play.lock=null;
   setBeats(-1);$('barNo').innerHTML='&nbsp;';renderStrip();renderBoard();
   const lp=$('lplay');if(lp)lp.textContent='▶ この設定で伴奏スタート';}
-$('play').onclick=$('mplay').onclick=()=>{play.on?stop():start();if(S.tab==='lesson')renderPanel();};
+$('play').onclick=$('mplay').onclick=()=>{play.on?stop():start();if(['lesson','session','chroma'].includes(S.tab))renderPanel();};
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|BUTTON/.test(e.target.tagName)){e.preventDefault();$('play').click();}});
 
 /* ---------- boot ---------- */
+buildCustom();
 fillSelects();
 if(mqPhone.matches)$('ctlBox').open=false;
 
