@@ -180,7 +180,7 @@ textarea{width:100%;min-height:68px;background:var(--surface2);border:1px solid 
   .bar.two .slot+.slot{padding-top:8px}
   .chips.rows .chip{font-size:.7rem;padding:8px 1px;letter-spacing:-.02em;white-space:normal;overflow-wrap:anywhere;line-height:1.15;text-overflow:clip}
   .cgrid{display:grid;grid-template-columns:1fr 1fr}
-  .cgrid .chk{grid-column:1/-1}
+  .cgrid .chk,.cgrid .wide{grid-column:1/-1}
   .cgrid select{width:100%;padding:10px}
 }
 
@@ -275,6 +275,8 @@ button,svg,.chip,select{touch-action:manipulation}
     <div class="field"><span class="fl">丸の中の表示</span>
       <div class="seg" role="group" aria-label="丸の中の表示"><button type="button" id="lbl-note" data-l="note">音名</button><button type="button" id="lbl-deg" data-l="deg">度数</button></div></div>
     <label class="chk" for="follow"><input type="checkbox" id="follow"> コードに追従</label>
+    <div class="field"><label for="groove">リズム</label><select id="groove"></select></div>
+    <div class="field"><label for="inst">コード楽器</label><select id="inst"></select></div>
     <div class="vol">
       <div class="field"><label for="vd">ドラム音量</label><input type="range" id="vd" min="0" max="1" step="0.05"></div>
       <div class="field"><label for="vc">コード音量</label><input type="range" id="vc" min="0" max="1" step="0.05"></div>
@@ -323,6 +325,31 @@ const Q={maj:{s:'',iv:[0,4,7]},m:{s:'m',iv:[0,3,7]},'7':{s:'7',iv:[0,4,7,10]},ma
 const QORDER=['maj','m','7','maj7','m7','m7b5','dim7','sus4','6','m6'];
 /* セッションでのコード別スケール（指板の小さい丸） */
 const QSCALE={maj:'major',m:'minor','7':'mixo',maj7:'major',m7:'dorian',m7b5:'locrian',dim7:'dimwh',sus4:'mixo','6':'major',m6:'dorian'};
+/* ---------- grooves ----------
+   1小節ぶんのステップ列。spb=1拍あたりのステップ数（4=16分、3=3連）。
+   文字：X強 x普通 m弱 g ゴースト o オープンハイハット . 休み
+   comp=[開始ステップ, 長さ] のコード楽器の刻み。sw=裏の16分を遅らせる量（16分音符に対する割合） */
+const GROOVES={
+  eight:{name:'8ビート',spb:4,sw:0,tempo:100,inst:'pad',
+    desc:'ロック／ポップの基本。まっすぐな8分のハイハット。',
+    d:{k:'x.......x.x.....',s:'....x.......x...',h:'X.x.x.x.X.x.x.x.'},comp:[[0,8],[8,8]]},
+  funk:{name:'ミニマル・ファンク（Vulfpeck風）',spb:4,sw:0.14,tempo:96,inst:'epiano',
+    desc:'乾いたドラムに、ゴーストノートと軽く跳ねる16分。エレピは短く切る。',
+    d:{k:'x..x..x...x..x..',s:'.g..X..g.g..X..g',h:'xmxmxmxmxmxmxmom'},comp:[[0,1],[3,1],[6,2],[10,1],[13,1]]},
+  city:{name:'16ビート（シティポップ）',spb:4,sw:0.05,tempo:104,inst:'epiano',
+    desc:'16分のハイハットに、先取り（食い）のコード。',
+    d:{k:'x.....x...x.....',s:'....x.......x...',h:'xmxmxmxmxmxmxmom'},comp:[[0,6],[6,4],[10,6]]},
+  shuffle:{name:'ハーフタイム・シャッフル',spb:3,sw:0,tempo:80,inst:'epiano',
+    desc:'3連のハネ。スネアは3拍目だけ、間を小さなゴーストで埋める。',
+    d:{k:'x........x..',s:'.g..g.X...g.',h:'x.xx.xx.xx.x'},comp:[[0,2],[5,1],[8,4]]},
+  disco:{name:'ディスコ（4つ打ち）',spb:4,sw:0,tempo:116,inst:'clav',
+    desc:'4つ打ちのキックと裏のオープンハイハット。',
+    d:{k:'x...x...x...x...',s:'....x.......x...',h:'x.o.x.o.x.o.x.o.'},comp:[[2,1],[6,1],[10,1],[14,1]]},
+  bossa:{name:'ボサノバ',spb:4,sw:0,tempo:120,inst:'epiano',
+    desc:'クロススティックのクラーベと、軽いハイハット。',
+    d:{k:'x..xx..xx..xx..x',r:'x..x..x...x..x..',h:'m.m.m.m.m.m.m.m.'},comp:[[0,2],[3,2],[6,2],[10,2],[13,2]]}
+};
+const INSTS={auto:'自動',pad:'パッド',epiano:'エレピ',clav:'クラビ'};
 const DEF_CUSTOM=[[{r:2,q:'m7'}],[{r:7,q:'7'}],[{r:0,q:'maj7'}],[{r:9,q:'7'}],[{r:2,q:'m7'}],[{r:7,q:'7'}],[{r:0,q:'maj7'}],[{r:0,q:'maj7'}]];
 
 /* ---------- chromatic ---------- */
@@ -425,7 +452,7 @@ const GLOSS=[
 
 /* ---------- state ---------- */
 const DEF={tab:'lesson',lesson:0,key:9,scale:'root',pos:null,prog:'vamp_m7',follow:false,label:'note',tempo:80,vd:0.7,vc:0.45,preview:0,
-  custom:JSON.parse(JSON.stringify(DEF_CUSTOM)),cLevel:'easy',cPattern:'p1234',cPerm:'1324',cSub:1,cTempo:60,cStart:5,cClimb:false,cSpeed:false,cInc:4,cEvery:2,cMax:120,cGuide:true};
+  custom:JSON.parse(JSON.stringify(DEF_CUSTOM)),cLevel:'easy',cPattern:'p1234',cPerm:'1324',cSub:1,cTempo:60,cStart:5,cClimb:false,cSpeed:false,cInc:4,cEvery:2,cMax:120,cGuide:true,groove:'eight',inst:'auto'};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('bassdojo')||'null'); if(s) S=Object.assign(S,s);}catch(e){}
 function save(){try{localStorage.setItem('bassdojo',JSON.stringify(S))}catch(e){}}
@@ -596,11 +623,13 @@ function fillSelects(){
   let po='<option value="all">全体</option><option value="0">開放〜3フレット</option>';
   for(let p=1;p<=12;p++)po+=`<option value="${p}">${p}〜${p+3}フレット</option>`;
   $('pos').innerHTML=po;
+  $('groove').innerHTML=Object.entries(GROOVES).map(([k,g])=>`<option value="${k}">${g.name}</option>`).join('');
+  $('inst').innerHTML=Object.entries(INSTS).map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
   $('prog').innerHTML=Object.entries(PROGS).map(([k,p])=>`<option value="${k}">${p.name}</option>`).join('');
 }
 function syncControls(){
   $('key').value=S.key;$('scale').value=S.scale;$('pos').value=S.pos===null?'all':S.pos;$('prog').value=S.prog;
-  $('follow').checked=S.follow;$('vd').value=S.vd;$('vc').value=S.vc;
+  $('follow').checked=S.follow;$('groove').value=S.groove;$('inst').value=S.inst;$('vd').value=S.vd;$('vc').value=S.vc;
   $('lbl-note').setAttribute('aria-pressed',S.label==='note');$('lbl-deg').setAttribute('aria-pressed',S.label==='deg');
   $('scale').disabled=S.follow;
   $('ctlBox').hidden=S.tab==='chroma';
@@ -608,7 +637,7 @@ function syncControls(){
   if(S.prog==='custom')$('hint').textContent+='　マイ進行はキーの影響を受けない（移調はセッションタブで）。';
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
   const posTxt=S.pos===null?'全体':S.pos===0?'開放〜3F':`${S.pos}〜${S.pos+3}F`;
-  $('sumState').textContent=`キー${NOTE[S.key]} ・ ${S.follow?'コード追従':SCALES[S.scale].name} ・ ${posTxt}`;
+  $('sumState').textContent=`キー${NOTE[S.key]} ・ ${S.follow?'コード追従':SCALES[S.scale].name} ・ ${posTxt} ・ ${grooveNow().name}`;
 }
 function all(){buildCustom();syncControls();renderBoard();renderStrip();renderPanel();save();}
 $('key').onchange=e=>{S.key=+e.target.value;all()};
@@ -616,6 +645,8 @@ $('scale').onchange=e=>{S.scale=e.target.value;all()};
 $('pos').onchange=e=>{S.pos=e.target.value==='all'?null:+e.target.value;all()};
 $('prog').onchange=e=>{const was=play.on;stop();S.prog=e.target.value;S.preview=0;all();if(was)start();};
 $('follow').onchange=e=>{S.follow=e.target.checked;all()};
+$('groove').onchange=e=>{S.groove=e.target.value;all()};
+$('inst').onchange=e=>{S.inst=e.target.value;all()};
 document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S.label=b.dataset.l;all()});
 $('tempo').oninput=e=>{const ch=S.tab==='chroma',v=+e.target.value;S[ch?'cTempo':'tempo']=v;if(ch&&play.on&&play.mode==='chroma')C.bpm=v;$('bpm').textContent=v;save()};
 $('vd').oninput=e=>{S.vd=+e.target.value;if(drumBus)drumBus.gain.value=S.vd;save()};
@@ -715,6 +746,15 @@ function renderSession(P){
   P.innerHTML=`<h2>セッション</h2>
     <p class="lead">好きなコードを最大16小節まで入れて、ループ再生に合わせて自由に弾く。小節を選んでから、下のボタンでルートと種類を決める。指板は自動でコードに追従する。</p>
     <div class="row" style="margin:12px 0 10px"><button type="button" class="btn" id="sPlay">${play.on?'■ 止める':'▶ このコードでセッション'}</button><span class="note">${B.length}小節・ループ再生</span></div>
+    <div class="picker" style="margin:0 0 12px">
+      <div class="tag">リズムと音色</div>
+      <div class="cgrid">
+        <div class="field wide"><label for="sGroove">リズム</label><select id="sGroove">${Object.entries(GROOVES).map(([k,g])=>`<option value="${k}"${k===S.groove?' selected':''}>${g.name}</option>`).join('')}</select></div>
+        <div class="field"><label for="sInst">コード楽器</label><select id="sInst">${Object.entries(INSTS).map(([k,n])=>`<option value="${k}"${k===S.inst?' selected':''}>${n}${k==='auto'?'（'+INSTS[grooveNow().inst]+'）':''}</option>`).join('')}</select></div>
+        <button type="button" class="btn ghost sm wide" id="sTempo" ${S.tempo===grooveNow().tempo?'disabled':''}>目安のテンポにする（${grooveNow().tempo} BPM）</button>
+      </div>
+      <p class="note" style="margin:0">${grooveNow().desc}</p>
+    </div>
     <div class="bars">${bars}</div>
     <div class="row" style="margin-top:8px">
       <button type="button" class="btn ghost sm" id="sAdd" ${B.length>=16?'disabled':''}>＋ 小節</button>
@@ -752,6 +792,9 @@ function renderSession(P){
     S.custom=r.bars;sel={bar:0,slot:0};S.preview=0;commitCustom();$('sMsg').className='ok';$('sMsg').textContent=`${r.bars.length}小節を反映した。`;};
   $('sLoad').onclick=()=>{S.custom=progToBars(PROGS[$('sPreset').value]);sel={bar:0,slot:0};S.preview=0;commitCustom();};
   $('sPlay').onclick=()=>{play.on?stop():start();renderSession(P);};
+  $('sGroove').onchange=e=>{S.groove=e.target.value;save();syncControls();renderSession(P);};
+  $('sInst').onchange=e=>{S.inst=e.target.value;save();syncControls();renderSession(P);};
+  $('sTempo').onclick=()=>{S.tempo=grooveNow().tempo;save();renderStrip();renderSession(P);};
 }
 
 /* ---------- chromatic panel ---------- */
@@ -787,11 +830,20 @@ function renderChromaPanel(P){
 }
 
 /* ---------- audio ---------- */
-let ctx,master,drumBus,padBus,noise;
+let ctx,master,drumBus,padBus,noise,drumIn,drumSat,drumComp,room;
+function makeDrumIn(){if(drumIn)drumIn.disconnect();drumIn=ctx.createGain();drumIn.connect(drumSat);drumIn.connect(room);}
 function ensureAudio(){
   if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();
     master=ctx.createDynamicsCompressor();master.connect(ctx.destination);
     drumBus=ctx.createGain();drumBus.gain.value=S.vd;drumBus.connect(master);
+    /* ドラム：軽い歪み→速いコンプで締め、短いルーム残響を少量 */
+    drumSat=ctx.createWaveShaper();const cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(1.6*x)/Math.tanh(1.6);}drumSat.curve=cv;
+    drumComp=ctx.createDynamicsCompressor();drumComp.threshold.value=-20;drumComp.ratio.value=4;drumComp.attack.value=0.004;drumComp.release.value=0.09;drumComp.knee.value=6;
+    drumSat.connect(drumComp).connect(drumBus);
+    room=ctx.createConvolver();const L=Math.floor(ctx.sampleRate*0.35),ir=ctx.createBuffer(2,L,ctx.sampleRate);
+    for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<L;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/L,3);}room.buffer=ir;
+    const rg=ctx.createGain();rg.gain.value=0.12;room.connect(rg).connect(drumBus);
+    makeDrumIn();
     padBus=ctx.createGain();padBus.gain.value=S.vc*0.5;padBus.connect(master);
     noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
   if(ctx.state==='suspended')ctx.resume();
@@ -802,6 +854,47 @@ function kick(t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.s
 function nz(t,freq,peak,dec,type='highpass'){const s=ctx.createBufferSource();s.buffer=noise;const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;const g=ctx.createGain();env(g,t,0.002,peak,dec);s.connect(f).connect(g).connect(drumBus);s.start(t);s.stop(t+dec+0.05);}
 function snare(t){nz(t,1400,0.45,0.16);const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=190;env(g,t,0.002,0.3,0.08);o.connect(g).connect(drumBus);o.start(t);o.stop(t+0.12);}
 function hat(t,p){nz(t,7500,p,0.04);}
+/* ---- 生ドラム寄りのキット（合成） ---- */
+const hum=v=>v*(0.92+Math.random()*0.16);
+function nzTo(t,type,freq,q,peak,dec){const s=ctx.createBufferSource();s.buffer=noise;s.playbackRate.value=0.9+Math.random()*0.2;
+  const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const g=ctx.createGain();env(g,t,0.001,peak,dec);
+  s.connect(f).connect(g).connect(drumIn);s.start(t,Math.random()*0.5);s.stop(t+dec+0.05);return f;}
+function tone(t,type,f0,f1,peak,dec,dest){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);
+  if(f1)o.frequency.exponentialRampToValueAtTime(f1,t+dec*0.6);env(g,t,0.001,peak,dec);o.connect(g).connect(dest||drumIn);o.start(t);o.stop(t+dec+0.05);}
+function dKick(t,v){tone(t,'sine',112,46,0.95*v,0.30);tone(t,'triangle',220,90,0.18*v,0.04);nzTo(t,'lowpass',2200,0.7,0.22*v,0.012);}
+function dSnare(t,v){const g=v<0.4,dec=g?0.07:0.17;
+  tone(t,'triangle',186,170,0.32*v,g?0.04:0.08);tone(t,'sine',332,310,0.16*v,g?0.03:0.06);
+  nzTo(t,'bandpass',2300,0.7,0.55*v,dec);nzTo(t,'highpass',5200,0.5,0.22*v,dec*0.8);}
+const METAL=[205.3,304.4,369.6,522.7,540,800];
+function dHat(t,v,open){const dec=open?0.32:0.045,bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=10000;bp.Q.value=0.9;
+  const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7200;const g=ctx.createGain();env(g,t,0.001,0.16*v,dec);
+  bp.connect(hp).connect(g).connect(drumIn);
+  METAL.forEach(f=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=f*1.7;o.connect(bp);o.start(t);o.stop(t+dec+0.05);});
+  nzTo(t,'highpass',9000,0.5,0.07*v,dec*0.7);}
+function dRim(t,v){tone(t,'triangle',1750,null,0.22*v,0.025);tone(t,'square',480,null,0.05*v,0.02);nzTo(t,'bandpass',3600,3,0.18*v,0.02);}
+const VEL={X:1.15,x:0.9,m:0.5,g:0.22,o:0.85};
+function hit(inst,ch,t){const v=hum(VEL[ch]||0.8);
+  if(inst==='k')dKick(t,v);else if(inst==='s')dSnare(t,v);else if(inst==='h')dHat(t,v,ch==='o');else if(inst==='r')dRim(t,v);}
+/* ---- コード楽器 ---- */
+function voicing(c){const r=chordRoot(c),pcs=Q[c.q].iv.map(x=>(r+x)%12);
+  return pcs.map(pc=>{let m=55+((pc-55)%12+12)%12;return m;}).sort((a,b)=>a-b);}
+function epiano(t,notes,dur,v){const drv=ctx.createWaveShaper(),cv=new Float32Array(512);for(let i=0;i<512;i++){const x=i/255.5-1;cv[i]=Math.tanh(2.2*x)/Math.tanh(2.2);}drv.curve=cv;
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3200;drv.connect(lp).connect(padBus);
+  const end=t+Math.max(0.09,dur);
+  notes.forEach(m=>{const f=mf(m),car=ctx.createOscillator(),mod=ctx.createOscillator(),mi=ctx.createGain(),g=ctx.createGain();
+    car.frequency.value=f;mod.frequency.value=f;mi.gain.setValueAtTime(f*2.6*v,t);mi.gain.exponentialRampToValueAtTime(f*0.25,t+0.35);
+    mod.connect(mi).connect(car.frequency);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.13*v,t+0.004);g.gain.exponentialRampToValueAtTime(0.05*v,t+0.9);
+    g.gain.setValueAtTime(0.05*v,end);g.gain.exponentialRampToValueAtTime(0.0001,end+0.07);
+    car.connect(g).connect(drv);car.start(t);mod.start(t);car.stop(end+0.1);mod.stop(end+0.1);});}
+function clav(t,notes,dur,v){const end=t+Math.min(Math.max(0.07,dur),0.5);
+  notes.forEach(m=>{const o=ctx.createOscillator(),bp=ctx.createBiquadFilter(),hp=ctx.createBiquadFilter(),g=ctx.createGain();
+    o.type='sawtooth';o.frequency.value=mf(m+12);bp.type='bandpass';bp.frequency.setValueAtTime(2600,t);bp.frequency.exponentialRampToValueAtTime(900,t+0.15);bp.Q.value=2.5;
+    hp.type='highpass';hp.frequency.value=280;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.11*v,t+0.002);g.gain.exponentialRampToValueAtTime(0.03*v,t+0.18);
+    g.gain.setValueAtTime(0.03*v,end);g.gain.exponentialRampToValueAtTime(0.0001,end+0.03);
+    o.connect(bp).connect(hp).connect(g).connect(padBus);o.start(t);o.stop(end+0.05);});}
+const grooveNow=()=>GROOVES[S.groove]||GROOVES.eight;
+const instNow=()=>S.inst==='auto'?grooveNow().inst:S.inst;
 function click(t,acc){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=acc?1800:1200;env(g,t,0.001,0.4,0.05);o.connect(g).connect(master);o.start(t);o.stop(t+0.08);}
 function pad(t,midis,dur){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=1600;f.connect(padBus);
   midis.forEach(m=>{['triangle','sine'].forEach((tp,k)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=tp;o.frequency.value=mf(m+(k?12:0));o.detune.value=k?3:-3;
@@ -845,9 +938,11 @@ function scheduleBeat(n,t){
   const bd=60/S.tempo;
   if(n<4){click(t,n===0);play.q.push({t,count:4-n,beat:n});return;}
   const p=prog(),T=p.chords.reduce((a,c)=>a+c.b,0),b=(n-4)%T,inBar=b%4,{i,off,c}=chordAtBeat(b);
-  if(inBar===0||inBar===2)kick(t); if(inBar===1||inBar===3)snare(t);
-  hat(t,0.16);hat(t+bd/2,0.08);
-  if(off===0){const r=chordRoot(c);let base=48+r;if(base<52)base+=12;pad(t,Q[c.q].iv.map(x=>base+x),c.b*bd);}
+  const G=grooveNow(),spb=G.spb,sd=bd/spb,ins=instNow();
+  for(let s2=0;s2<spb;s2++){const st=inBar*spb+s2;let tt=t+s2*sd;if(spb===4&&s2%2===1)tt+=G.sw*sd;
+    for(const k in G.d){const ch=G.d[k][st];if(ch&&ch!=='.')hit(k,ch,tt+(Math.random()-0.5)*0.006);}
+    if(ins!=='pad')G.comp.forEach(([cs,len])=>{if(cs===st){const fn=ins==='clav'?clav:epiano;fn(tt,voicing(c),len*sd*0.92,hum(0.9));}});}
+  if(ins==='pad'&&off===0)pad(t,voicing(c),c.b*bd);
   play.q.push({t,idx:i,beat:inBar,bar:Math.floor(b/4)+1,bars:T/4});
 }
 function tick(){while(play.next<ctx.currentTime+0.12){if(play.mode==='chroma')scheduleChroma(play.n,play.next);else{scheduleBeat(play.n,play.next);play.next+=60/S.tempo;}play.n++;}}
@@ -872,6 +967,7 @@ function start(){ensureAudio();if(play.on)return;
 }
 function stop(){if(!play.on)return;play.on=false;clearInterval(play.timer);cancelAnimationFrame(play.raf);play.q=[];play.idx=-1;play.count=0;
   if(padBus){padBus.disconnect();padBus=ctx.createGain();padBus.gain.value=S.vc*0.5;padBus.connect(master);}
+  if(drumIn)makeDrumIn();
   try{play.lock&&play.lock.release();}catch(e){}play.lock=null;
   setBeats(-1);$('barNo').innerHTML='&nbsp;';renderStrip();renderBoard();
   const lp=$('lplay');if(lp)lp.textContent='▶ この設定で伴奏スタート';}
